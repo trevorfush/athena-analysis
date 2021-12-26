@@ -101,6 +101,7 @@ class Runsim():
             last = cp[2]
 
             # NEED TO FILL THIS IN
+            os.system(f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} -r {last} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3")
 
         else:
 
@@ -109,8 +110,8 @@ class Runsim():
 
 if __name__ == "__main__":
 
-    params = {"runname"        : "sod_test",
-              "problem_name"   : "sod.in",
+    params = {"runname"        : "sedov_restart_test",
+              "problem_name"   : "sedov.in",
               "reconstruction" : "plm",
               "riemann"        : "hlle",
               "reference_sol"  : False}
