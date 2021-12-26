@@ -1,0 +1,62 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd">
+<Xdmf Version="3.0">
+  <Domain>
+  <Grid Name="Mesh" GridType="Collection">
+    <Time Value="0.300018"/>
+    <Information Name="Cycle" Value="258"/>
+    <Grid GridType="Uniform" Name="0">
+      <Topology Type="3DRectMesh" NumberOfElements="2 257 257"/>
+      <Geometry Type="VXVYVZ">
+        <DataItem ItemType="HyperSlab" Dimensions="257"><DataItem Dimensions="3 2" NumberType="Int" Format="XML">0 0 1 1 1 257</DataItem>
+          <DataItem Format="HDF" Dimensions="1 257" Name="x" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/Locations/x</DataItem>
+</DataItem>
+        <DataItem ItemType="HyperSlab" Dimensions="257"><DataItem Dimensions="3 2" NumberType="Int" Format="XML">0 0 1 1 1 257</DataItem>
+          <DataItem Format="HDF" Dimensions="1 257" Name="y" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/Locations/y</DataItem>
+</DataItem>
+        <DataItem ItemType="HyperSlab" Dimensions="2"><DataItem Dimensions="3 2" NumberType="Int" Format="XML">0 0 1 1 1 2</DataItem>
+          <DataItem Format="HDF" Dimensions="1 2" Name="z" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/Locations/z</DataItem>
+</DataItem>
+      </Geometry>
+      <Attribute Name="prim_0" Center="Cell">
+        <DataItem ItemType="HyperSlab" Dimensions="1 256 256 1">
+          <DataItem Dimensions="3 5" NumberType="Int" Format="XML">0 0 0 0 0 1 1 1 1 1 1 1 256 256 1</DataItem>
+          <DataItem Format="HDF" Dimensions="1 1 256 256 5" Name="prim" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/prim</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute Name="prim_1" Center="Cell">
+        <DataItem ItemType="HyperSlab" Dimensions="1 256 256 1">
+          <DataItem Dimensions="3 5" NumberType="Int" Format="XML">0 0 0 0 1 1 1 1 1 1 1 1 256 256 1</DataItem>
+          <DataItem Format="HDF" Dimensions="1 1 256 256 5" Name="prim" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/prim</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute Name="prim_2" Center="Cell">
+        <DataItem ItemType="HyperSlab" Dimensions="1 256 256 1">
+          <DataItem Dimensions="3 5" NumberType="Int" Format="XML">0 0 0 0 2 1 1 1 1 1 1 1 256 256 1</DataItem>
+          <DataItem Format="HDF" Dimensions="1 1 256 256 5" Name="prim" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/prim</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute Name="prim_3" Center="Cell">
+        <DataItem ItemType="HyperSlab" Dimensions="1 256 256 1">
+          <DataItem Dimensions="3 5" NumberType="Int" Format="XML">0 0 0 0 3 1 1 1 1 1 1 1 256 256 1</DataItem>
+          <DataItem Format="HDF" Dimensions="1 1 256 256 5" Name="prim" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/prim</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute Name="prim_4" Center="Cell">
+        <DataItem ItemType="HyperSlab" Dimensions="1 256 256 1">
+          <DataItem Dimensions="3 5" NumberType="Int" Format="XML">0 0 0 0 4 1 1 1 1 1 1 1 256 256 1</DataItem>
+          <DataItem Format="HDF" Dimensions="1 1 256 256 5" Name="prim" NumberType="Float" Precision="8">
+            parthenon.prim.00003.phdf:/prim</DataItem>
+        </DataItem>
+      </Attribute>
+      </Grid>
+    </Grid>
+  </Domain>
+</Xdmf>
