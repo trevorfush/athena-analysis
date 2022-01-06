@@ -98,7 +98,7 @@ class Runsim():
             os.mkdir(f"{self.path}/{self.savename}")
             os.chdir(f"{self.path}/{self.savename}")
 
-            print(self.riemann, self.recon)
+            # print(self.riemann, self.recon)
             start = time.time()
             os.system(f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3")
             end = time.time()
