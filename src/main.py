@@ -22,6 +22,8 @@ class Runsim():
 
         self.reference = params["reference_sol"]
 
+        self.max_out   = params["last_output"]
+
         self.path      = "../data"
 
         self.athenapk  = "../../athenapk"
@@ -47,9 +49,9 @@ class Runsim():
         direxist = os.path.isdir(f"{self.path}/{self.savename}")
         fileexist = os.path.isfile(f"{self.path}/{self.savename}/FINISHED.txt")
 
-        # print(direxist, fileexist)
+        print(direxist, fileexist)
 
-        if (direxist == True and len(os.path.listdir(f"{self.path}/{self.savename}")) > 0):
+        if (direxist == True and len(os.listdir(f"{self.path}/{self.savename}")) > 0):
             current_progress[0] = True
         if direxist == False:
             current_progress[0] = False
@@ -67,11 +69,19 @@ class Runsim():
         return current_progress
 
     def genFINISHED(self, runtime):
-        
-        with open(f"FINISHED.txt", "w+") as f:
 
-            f.write(f"Finished run with following params: \nRUNTIME = {runtime}\nRECONST = {self.recon}\nRIEMANN = {self.riemann}\nREFERENCE = {self.reference}\n")
-            f.close()
+        last_ran = max(glob.glob(f"{self.path}/{self.savename}/*.?????.phdf"))
+
+        if self.max_out == last_ran:
+        
+            with open(f"FINISHED.txt", "w+") as f:
+
+                f.write(f"Finished run with following params: \nRUNTIME = {runtime}\nRECONST = {self.recon}\nRIEMANN = {self.riemann}\nREFERENCE = {self.reference}\n")
+                f.close()
+
+        else:
+            print("[ERROR] Did not finish running simulation")
+            pass
 
     def runsim(self):
         """
@@ -94,6 +104,8 @@ class Runsim():
             end = time.time()
             
             rt = end-start
+
+            ## NEED TO CHECK IF IT ACTUALLY FINISHED HERE
             self.genFINISHED(runtime=rt)
 
         elif (cp[0] == True and cp[1] == False):
@@ -101,6 +113,7 @@ class Runsim():
             last = cp[2]
 
             # NEED TO FILL THIS IN
+            os.chdir(f"{self.path}/{self.savename}")
             os.system(f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} -r {last} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3")
 
         else:
@@ -114,7 +127,8 @@ if __name__ == "__main__":
               "problem_name"   : "sedov.in",
               "reconstruction" : "plm",
               "riemann"        : "hlle",
-              "reference_sol"  : False}
+              "reference_sol"  : False,
+              "last_output"    : "parthenon.prim.00020.phdf"}
 
     test = Runsim(params)
     
