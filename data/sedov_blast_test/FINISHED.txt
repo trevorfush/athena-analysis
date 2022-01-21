@@ -1,5 +1,0 @@
-Finished run with following params: 
-RUNTIME = 29.22394871711731
-RECONST = plm
-RIEMANN = hlle
-REFERENCE = False
