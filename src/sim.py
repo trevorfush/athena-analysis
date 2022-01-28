@@ -42,7 +42,7 @@ class Runsim():
 
     def load_params(self):
 
-        with open("simconfig.yaml", "r") as f:
+        with open("simconfig.yml", "r") as f:
             config = yaml.safe_load(f)
             f.close()
 
@@ -140,8 +140,8 @@ class Runsim():
         if cp[0] == False:
             
             # print(here)
-            os.mkdir(f"{self.path}/{self.savename}")
-            os.chdir(f"{self.path}/{self.savename}")
+            os.mkdir(f"{self.path}/{self.savename}_{self.riemann}_{self.recon}")
+            os.chdir(f"{self.path}/{self.savename}_{self.riemann}_{self.recon}")
 
             # print(self.riemann, self.recon)
             start = time.time()

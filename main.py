@@ -8,6 +8,7 @@ import yaml
 sys.path.append("..")
 
 from src.sim import Runsim
+from src.analysis import Analysis
 
 #######################################
 
@@ -19,7 +20,7 @@ sedov_noB_params = {
                     "runname"        : "sedov_noB",
                     "problem_name"   : "sedov.in",
                     "problem_id"     : "sedov",
-                    "reconstruction" : "plm",
+                    "reconstruction" : "wenoz",
                     "riemann"        : "hlle",
                     "reference_sol"  : False
                    }
@@ -101,8 +102,12 @@ if __name__ == "__main__":
     else:
         print("[ERROR] Please use a valid implemented runname!!")
 
-    test = Runsim(params)
+    # test = Runsim(params)
     
-    print("Runsim object created, running sim!")
-    test.runsim()
-    print("Finished running sim!")
+    # print("Runsim object created, running sim!")
+    # test.runsim()
+    # print("Finished running sim!")
+
+    test = Analysis(params)
+
+    test.Analyze()
