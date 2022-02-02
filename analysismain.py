@@ -56,9 +56,9 @@ kh_noB_params = {
                     "runname"        : "kh_noB",
                     "problem_name"   : "kh-shear-lecoanet_2d.in",
                     "problem_id"     : "kh",
-                    "reconstruction" : "wenoz",
+                    "reconstruction" : "plm",
                     "riemann"        : "hlle",
-                    "reference_sol"  : True
+                    "reference_sol"  : False
                 }
 
 current_sheet_params = {
@@ -102,8 +102,6 @@ if __name__ == "__main__":
     else:
         print("[ERROR] Please use a valid implemented runname!!")
 
-    test = Runsim(params)
-    
-    print("Runsim object created, running sim!")
-    test.runsim()
-    print("Finished running sim!")
+    test = Analysis(params)
+
+    test.Analyze()

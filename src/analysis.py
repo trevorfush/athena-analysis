@@ -138,7 +138,7 @@ class Analysis():
                 
                 title = f"{self.runname}_{riemann}_{reconst}_{field[-1]}"
 
-                p = yt.SlicePlot(ds, fields=field, axis="z")
+                p = yt.SlicePlot(ds, "z", field=field)
                 p.annotate_timestamp(time_format="t = {time:.3f}", text_args={'color':'white',
                                     'horizontalalignment':'center', 'verticalalignment':'top', 
                                     "size":20})
@@ -302,22 +302,24 @@ class Analysis():
         print("Getting slices")
         slice_comp = self.checkFinalSlices()
         if slice_comp == True:
+            print("Already finished getting slices!")
             pass
         else:
             print("RUNNING SLICES")
             self.getFinalSlices()
-        print("Finished getting slices")
+            print("Finished getting slices")
 
         # Check if norms plot complete. If not, run getNorms
 
         print("Getting norms")
         norm_comp = self.checkNorms()
         if norm_comp == True:
+            print("Already finished getting norms!")
             pass
         else:
             print("RUNNING NORMS")
             self.getNorms()
-        print("Finished getting norms")
+            print("Finished getting norms")
 
         # Check if final errors compelte. If not, run getFinalErrors
 
