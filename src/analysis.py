@@ -7,6 +7,9 @@ import os
 import sys
 import glob
 import time
+from tqdm import tqdm
+import yaml
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 yt.set_log_level(50)
 
@@ -42,6 +45,8 @@ class Analysis():
 
         
         self.plotsavepreamble = f"{self.runname}_{self.riemann}_{self.recon}"
+        
+        self.simparams = 0
 
         ###############################################################################
 
@@ -51,6 +56,15 @@ class Analysis():
         # self.maxds  = yt.load(max(self.dslist))
 
         ###############################################################################
+
+    def load_params(self):
+
+        with open("simconfig.yml", "r") as f:
+            config = yaml.safe_load(f)
+            f.close()
+
+        self.simparams = config[self.runname]
+
     def checkSimProgress(self):
         """
         Checks progress of current simulation of Runsim object. Returns
@@ -85,69 +99,123 @@ class Analysis():
 
         return current_progress
 
-    def getNormVals(self, output, riemann, recon, field):
+    def getNormVals(self, ind, ds, refds, l1_array, l2_array, linf_array, t_array):
 
         # Getting reference riemann and reconstruction
-        reference_strs = glob.glob(f"{self.simpath}/REF_{self.runname}_*")
-        reference_str  = reference_strs[0]
+        # reference_strs = glob.glob(f"{self.simpath}/REF_{self.runname}_*")
+        # reference_str  = reference_strs[0]
 
-        ref_riemann    = reference_str.split("_")[-2]
-        ref_recon      = reference_str.split("_")[-1]
+        # ref_riemann    = reference_str.split("_")[-2]
+        # ref_recon      = reference_str.split("_")[-1]
 
-        ds     = yt.load(output)
-        ref_ds = yt.load(f"{self.simpath}/REF_{self.runname}_{ref_riemann}_{ref_recon}/{output.split('/')[-1]}")
+        # ds     = yt.load(output)
+        # ref_ds = yt.load(f"{self.simpath}/REF_{self.runname}_{ref_riemann}_{ref_recon}/{output.split('/')[-1]}")
+        
         t = np.float64(ds.current_time.value)
 
         ad  = ds.all_data()
-        arr = ad[field]
-        data = arr.to_ndarray().reshape(ds.domain_dimensions)
+        refad  = refds.all_data()
 
-        ad  = ref_ds.all_data()
-        arr = ad[field]
-        ref_data = arr.to_ndarray().reshape(ref_ds.domain_dimensions)
+        for (j, field) in enumerate(ds.field_list):
 
-        N = 1
-        for dim in data.shape:
-            N *= dim
+            arr = ad[field]
+            data = arr.to_ndarray().reshape(ds.domain_dimensions)
 
-        e_ij = np.abs(np.abs(ref_data) - np.abs(data))
+            refarr = refad[field]
+            ref_data = refarr.to_ndarray().reshape(refds.domain_dimensions)
 
-        l1 = 1/N * (e_ij.sum())
-        l2 = np.sqrt(1/N * ((e_ij**2).sum()))
-        linf = np.amax(e_ij)
+            N = 1
+            for dim in data.shape:
+                N *= dim
 
-        return l1, l2, linf, t
+            # e_ij = np.abs(np.abs(ref_data) - np.abs(data)) / np.abs(ref_data)
+            # NEED TO GET THIS TO WORK WITH SMALL VALUES SOMEHOW
+
+            e_ij = np.abs(np.abs(ref_data) - np.abs(data))
+
+            l1 = 1/N * (e_ij.sum())
+            l2 = np.sqrt(1/N * ((e_ij**2).sum()))
+            linf = np.amax(e_ij)
+
+            l1_array[j, ind] = l1
+            l2_array[j, ind] = l2
+            linf_array[j, ind] = linf
+            t_array[ind] = t
+
+    def getDifferencePlots(self, ind, ds, refds, t_array, riemann, reconst, ref_riemann, ref_reconst):
+
+        ad = ds.all_data()
+        ref_ad = refds.all_data()
+
+        num_fields = len(ds.field_list)
+        fig, ax = plt.subplots(3, num_fields, figsize=(15,9))
+
+        for (j,field) in enumerate(ds.field_list):
+
+            arr = ad[field]
+            ref_arr = ref_ad[field]
+
+            data = arr.to_ndarray().reshape(refds.domain_dimensions)
+            ref_data = ref_arr.to_ndarray().reshape(refds.domain_dimensions)
+
+            diff = ref_data - data
+
+            im1 = ax[0,j].imshow(ref_data[:,:,0])
+            im2 = ax[1,j].imshow(data[:,:,0])
+            im3 = ax[2,j].imshow(diff[:,:,0], cmap="jet")
+
+            divider1 = make_axes_locatable(ax[0,j])
+            cax1 = divider1.append_axes("right",size="5%",pad=0.05)
+            cbar1 = plt.colorbar(im1, cax=cax1)
+
+            divider2 = make_axes_locatable(ax[1,j])
+            cax2 = divider2.append_axes("right",size="5%",pad=0.05)
+            cbar2 = plt.colorbar(im2, cax=cax2)
+
+            divider3 = make_axes_locatable(ax[2,j])
+            cax3 = divider3.append_axes("right",size="5%",pad=0.05)
+            cbar3 = plt.colorbar(im3, cax=cax3)
+
+            ax[0,j].set_title(field[-1])
+
+        ax[0,0].set_ylabel("Reference")
+        ax[1,0].set_ylabel("Comparison")
+        ax[2,0].set_ylabel("Magnitude Diff.")
+
+        fig.tight_layout()
+        # fig.text(0.25, 0, s=f"Riemann : {riemann}, Reconst. : {reconst}\nRef Riemann : {ref_riemann}, Ref Reconst. : {ref_reconst}", fontsize=16)
+        fig.suptitle(f"t = {round(t_array[ind],4)}\nRiemann : {riemann}, Reconst. : {reconst} --> Ref Riemann : {ref_riemann}, Ref Reconst. : {ref_reconst}", fontsize=16, y=1.0)
+
+        # print(f"Saving to : {self.runname}_{str(ind).zfill(5)}_diff_plot.png")
+        plt.savefig(f"{self.path}/{self.runname}/{self.runname}_{riemann}_{reconst}_{str(ind).zfill(5)}_diff_plot.png",dpi=276)
+        plt.close()
 
 
-    def getFinalSlices(self):
+    def getFinalSlices(self, ind, ds, ref_ds, riemann, reconst, ref_riemann, ref_reconst):
 
         start = time.time()
+        for field in ds.field_list:   
 
-        sims = glob.glob(f"{self.simpath}/{self.savename}_*")
+            title = f"{self.runname}_{riemann}_{reconst}_{field[-1]}_{str(ind).zfill(5)}"
+            reftitle = f"{self.runname}_{ref_riemann}_{ref_reconst}_{field[-1]}_{str(ind).zfill(5)}"
 
-        for sim in sims:
-            print(f"Making slices for {sim} ...")
-            riemann = sim.split("_")[-2]
-            reconst = sim.split("_")[-1]
+            p = yt.SlicePlot(ds, "z", fields=field)
+            p.annotate_timestamp(time_format="t = {time:.3f}", text_args={'color':'white',
+                                'horizontalalignment':'center', 'verticalalignment':'top', 
+                                "size":20})
 
-            output = max(sorted(glob.glob(f"{sim}/*.phdf")))
+            p.annotate_title(title)
+            p.save(name=f"{self.path}/{self.runname}/{title}.png")
 
-            ds = yt.load(output)
+            q = yt.SlicePlot(ref_ds, "z", fields=field)
+            q.annotate_timestamp(time_format="t = {time:.3f}", text_args={'color':'white',
+                                'horizontalalignment':'center', 'verticalalignment':'top', 
+                                "size":20})
 
-            for field in ds.field_list:
-                
-                title = f"{self.runname}_{riemann}_{reconst}_{field[-1]}"
-
-                p = yt.SlicePlot(ds, "z", field=field)
-                p.annotate_timestamp(time_format="t = {time:.3f}", text_args={'color':'white',
-                                    'horizontalalignment':'center', 'verticalalignment':'top', 
-                                    "size":20})
-
-                p.annotate_title(title)
-                p.save(name=f"{self.path}/{self.runname}/{title}.png")
+            q.annotate_title(reftitle)
+            q.save(name=f"{self.path}/{self.runname}/{reftitle}.png")
 
         end = time.time()
-
         with open(f"{self.path}/{self.runname}/SLICES_FINISHED.txt", "w+") as f:
 
                 f.write(f"Finished with slices in {end - start} sec. \n")
@@ -157,80 +225,40 @@ class Analysis():
 
         return os.path.isfile(f"{self.path}/{self.savename}/SLICES_FINISHED.txt")
 
-    def getNorms(self):
+    def getNorms(self, l1_lists, l2_lists, linf_lists, t_lists, riemanns, reconsts, field_list):
 
         start = time.time()
 
-        sims = glob.glob(f"{self.simpath}/{self.savename}_*")
+        cols = plt.cm.cool(np.linspace(0,1,len(l1_lists)))
 
-        # NEED TO CHANGE THIS TO DO ALL OF THE FIELDS (MAYBE???)
+        for field in range(len(field_list)):
 
-        field = "Density"
+            fig, ax = plt.subplots(3, 1, sharex=True, figsize=(8,10))
 
-        riemanns = []
-        recons   = []
+            for i in range(len(t_lists)):
 
-        l1s_bysim = []
-        l2s_bysim = []
-        linfs_bysim = []
-        ts_bysim    = []
+                ax[0].plot(t_lists[i], l1_lists[i][field,:], color=cols[i], label=f"{riemanns[i]}_{reconsts[i]}")
 
-        for sim in sims:
-            riemann = sim.split("_")[-2]
-            reconst = sim.split("_")[-1]
+                ax[1].plot(t_lists[i], l2_lists[i][field,:], color=cols[i], label=f"{riemanns[i]}_{reconsts[i]}")
+            
+                ax[2].plot(t_lists[i], linf_lists[i][field,:], color=cols[i], label=f"{riemanns[i]}_{reconsts[i]}")
 
-            riemanns.append(riemann)
-            recons.append(reconst)
+            ax[0].set_ylabel(r"$L_1$", rotation=0, labelpad = 10)
 
-            outputs = sorted(glob.glob(f"{sim}/*.phdf"))
+            ax[1].set_ylabel(r"$L_2$", rotation=0, labelpad = 10)
 
-            l1s = []
-            l2s = []
-            linfs = []
-            ts    = []
+            ax[2].set_ylabel(r"$L_{\infty}$", rotation=0, labelpad = 10)
+            ax[2].set_xlabel(r"Time [code time]")
 
-            for output in outputs:
-                print(output)
-                l1, l2, linf, t = self.getNormVals(output, riemann, reconst, field)
+            for p in range(3):
+                ax[p].legend()
+                ax[p].grid()
 
-                l1s.append(l1)
-                l2s.append(l2)
-                linfs.append(linf)
-                ts.append(t)
+            savetitle = f"{self.path}/{self.savename}/{field_list[field][-1]}_norms_vs_time.png"
 
-            l1s_bysim.append(l1s)
-            l2s_bysim.append(l2s)
-            linfs_bysim.append(linfs)
-            ts_bysim.append(ts)
+            plt.savefig(savetitle)
 
-        fig, ax = plt.subplots(3, 1, sharex=True, figsize=(8,10))
-
-        cols = plt.cm.cool(np.linspace(0,1,len(sims)))
-
-        for i in range(len(l1s_bysim)):
-
-            ax[0].plot(ts_bysim[i], l1s_bysim[i], color=cols[i], label=f"{riemanns[i]}_{recons[i]}")
-
-            ax[1].plot(ts_bysim[i], l2s_bysim[i], color=cols[i], label=f"{riemanns[i]}_{recons[i]}")
-        
-            ax[2].plot(ts_bysim[i], linfs_bysim[i], color=cols[i], label=f"{riemanns[i]}_{recons[i]}")
-
-        ax[0].set_ylabel(r"$L_1$", rotation=0)
-
-        ax[1].set_ylabel(r"$L_2$", rotation=0)
-
-        ax[2].set_ylabel(r"$L_{\infty}$", rotation=0)
-        ax[2].set_xlabel(r"Time [code time]")
-
-        for i in range(3):
-            ax[i].legend()
-            ax[i].grid()
-
-        savetitle = f"{self.path}/{self.savename}/norms_vs_time.png"
-
-        plt.savefig(savetitle)
-
-        plt.close()
+            plt.close()
 
         end = time.time()
 
@@ -297,29 +325,94 @@ class Analysis():
 
         # os.chdir(f"{self.path}/{self.savename}")
 
-        # Check if slices complete. If not, run getFinalSlices
+        self.load_params()
 
-        print("Getting slices")
-        slice_comp = self.checkFinalSlices()
-        if slice_comp == True:
-            print("Already finished getting slices!")
-            pass
-        else:
-            print("RUNNING SLICES")
-            self.getFinalSlices()
-            print("Finished getting slices")
+        runname = self.runname
+        refname = f"REF_{runname}"
 
-        # Check if norms plot complete. If not, run getNorms
+        print(self.runname)
 
-        print("Getting norms")
-        norm_comp = self.checkNorms()
-        if norm_comp == True:
-            print("Already finished getting norms!")
-            pass
-        else:
-            print("RUNNING NORMS")
-            self.getNorms()
-            print("Finished getting norms")
+        runs  = glob.glob(f"{self.simpath}/{self.runname}_*")
+        refrun = glob.glob(f"{self.simpath}/REF_{self.runname}_*")[0]
+
+
+        l1_lists   = []
+        l2_lists   = []
+        linf_lists = []
+        t_lists    = []
+        riemanns   = []
+        recons     = []
+        field_list = 0
+
+        for run in runs:
+            
+            print(f"\n[STARTING] Starting analysis for {run}")
+
+            outputs = sorted(glob.glob(f"{run}/*.phdf"))
+            ref_out = sorted(glob.glob(f"{refrun}/*.phdf"))
+
+            riemann = outputs[0].split("/")[-2].split("_")[-2]
+            reconst = outputs[0].split("/")[-2].split("_")[-1]
+
+            ref_riemann = ref_out[0].split("/")[-2].split("_")[-2]
+            ref_reconst = ref_out[0].split("/")[-2].split("_")[-1]
+
+            temp_val = yt.load(outputs[-1])
+            field_list = temp_val.field_list
+
+            num_fields = len(field_list)
+            num_touts  = len(outputs)
+
+            l1_array   = np.zeros((num_fields, num_touts), dtype=np.float64)
+            l2_array   = np.zeros((num_fields, num_touts), dtype=np.float64)
+            linf_array = np.zeros((num_fields, num_touts), dtype=np.float64)
+            t_array    = np.zeros(num_touts, dtype=np.float64)
+
+            for ind in tqdm(range(len(outputs)), desc=f"Analyzing {run}"):
+
+                ds = yt.load(outputs[ind])
+                refds = yt.load(ref_out[ind])
+
+                # self.getNormVals(ind, ds, refds, l1_array, l2_array, linf_array, t_array)
+
+                self.getDifferencePlots(ind, ds, refds, t_array, riemann, reconst, ref_riemann, ref_reconst)
+
+                # if (ind == 0) or (ind == len(outputs)-1):
+
+                #     self.getFinalSlices(ind, ds, refds, riemann, reconst, ref_riemann, ref_reconst)
+
+            l1_lists.append(l1_array)
+            l2_lists.append(l2_array)
+            linf_lists.append(linf_array)
+            t_lists.append(t_array)
+            riemanns.append(riemann)
+            recons.append(reconst)
+
+        # self.getNorms(l1_lists, l2_lists, linf_lists, t_lists, riemanns, recons, field_list)
+
+        # # Check if slices complete. If not, run getFinalSlices
+
+        # print("Getting slices")
+        # slice_comp = self.checkFinalSlices()
+        # if slice_comp == True:
+        #     print("Already finished getting slices!")
+        #     pass
+        # else:
+        #     print("RUNNING SLICES")
+        #     self.getFinalSlices()
+        #     print("Finished getting slices")
+
+        # # Check if norms plot complete. If not, run getNorms
+
+        # print("Getting norms")
+        # norm_comp = self.checkNorms()
+        # if norm_comp == True:
+        #     print("Already finished getting norms!")
+        #     pass
+        # else:
+        #     print("RUNNING NORMS")
+        #     self.getNorms()
+        #     print("Finished getting norms")
 
         # Check if final errors compelte. If not, run getFinalErrors
 

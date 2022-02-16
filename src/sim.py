@@ -129,11 +129,23 @@ class Runsim():
 
         for i in range(len(self.simparams)):
             if (keys[i] != "fluid") and (keys[i] != "tlim") and (keys[i] != "dt"):
-                param_str += f"problem/{self.problem_id}/{keys[i]}={vals[i]}"
+                param_str += f"problem/{self.problem_id}/{keys[i]}={vals[i]} "
             elif (keys[i] != "tlim") and (keys[i] != "dt"):
-                param_str += f"hydro/fluid={vals[i]}"
+                param_str += f"hydro/fluid={vals[i]} "
             else:
                 pass
+
+        for i in range(len(self.simparams)):
+            # This next check prevents crashing with hlld riemann solvers in MHD
+            if (keys[i] == "fluid") and (vals[i] != "euler"):
+                if self.riemann == "hlld":
+                    param_str += f"hydro/first_order_flux_correct=true "
+
+            if (keys[i] == "tlim"):
+                param_str += f"parthenon/time/tlim={vals[i]} "
+            if (keys[i] == "dt"):
+                param_str += f"parthenon/output0/dt={vals[i]} "
+            
         #######################################################################
 
         # RUN IF The SIMULATION HASN'T BEEN RUN YET
@@ -144,14 +156,20 @@ class Runsim():
             os.chdir(f"{self.path}/{self.savename}_{self.riemann}_{self.recon}")
 
             # print(self.riemann, self.recon)
+
+            runstate = f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} {param_str} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3"
+
+            print(f"[RUNNING] {runstate}")
             start = time.time()
-            os.system(f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} {param_str} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3")
+            os.system(runstate)
             end = time.time()
-            
+
             rt = end-start
 
             ## NEED TO CHECK IF IT ACTUALLY FINISHED HERE
             self.genFINISHED(runtime=rt)
+
+            os.chdir(f"../..")
         
         # RUN PICKING UP WHERE THE SIMULATION LEFT OFF
         elif (cp[0] == True and cp[1] == False):

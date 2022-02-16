@@ -102,8 +102,22 @@ if __name__ == "__main__":
     else:
         print("[ERROR] Please use a valid implemented runname!!")
 
-    test = Runsim(params)
-    
-    print("Runsim object created, running sim!")
-    test.runsim()
-    print("Finished running sim!")
+    ## Overriding params to run on different combinations of num. meth.
+
+    for riemann in ["hlld", "hlle"]:
+        for recon in ["dc","plm","ppm","wenoz"]:
+
+            params["riemann"] = riemann
+            params["reconstruction"] = recon
+
+            # Determining the reference parameters!!
+            if (recon == "wenoz") and (riemann == "hlle"):
+                params["reference_sol"] = True
+            else:
+                params["reference_sol"] = False
+
+            test = Runsim(params)
+            
+            print("Runsim object created, running sim!")
+            test.runsim()
+            print("Finished running sim!")
