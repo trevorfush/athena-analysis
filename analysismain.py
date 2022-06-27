@@ -1,4 +1,5 @@
 import os
+import string
 import sys
 import numpy as np 
 import glob
@@ -8,7 +9,9 @@ import yaml
 sys.path.append("..")
 
 from src.sim import Runsim
-from src.analysis import Analysis
+from src.parallelanalysis import Analysis
+
+import argparse
 
 #######################################
 
@@ -79,11 +82,48 @@ orszag_tang_params = {
                         "reference_sol"  : False
                      }
 
+turbulence_params  = {
+    "runname" : "turbulence",
+    "problem_name" : "athinput.fmturb",
+    "problem_id"   : "Turb",
+    "reconstruction" : "ppm",
+    "riemann"      : "hlle",
+    "reference_sol" : False
+}
+
 #######################################
 
 if __name__ == "__main__":
 
-    runname = sys.argv[1]
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-p","--prob", 
+                        help="Select the problem to be solved: (sedov_noB, sedov_Bx, sedov_By, brio_wu, kh_noB, current_sheet, orszag_tang, turbulence)")
+
+    parser.add_argument(
+        "--simloc",
+        help="Simulation directory where all simulation runs are located",
+        type=str
+    )
+
+    parser.add_argument(
+        "--outfile",
+        help="Output data name for analysis quantities",
+        type=str 
+    )
+
+    parser.add_argument(
+        "--saveimages",
+        help="Whether or not to save the plots associated with pipeline. If turned on, plots will be saved, otherwise just hdf5 data is saved",
+        action="store_true"
+    )
+
+    args = parser.parse_args()
+
+    print(f"args.prob = {args.prob}")
+    # print(f"args.code = {args.code}")
+
+    runname = args.prob
 
     if runname == "sedov_noB":
         params = sedov_noB_params
@@ -99,9 +139,11 @@ if __name__ == "__main__":
         params = current_sheet_params
     elif runname == "orszag_tang":
         params = orszag_tang_params
+    elif runname == "turbulence":
+        params = turbulence_params
     else:
         print("[ERROR] Please use a valid implemented runname!!")
 
-    test = Analysis(params)
+    test = Analysis(params, args.simloc, args.outfile, args.saveimages)
 
     test.Analyze()

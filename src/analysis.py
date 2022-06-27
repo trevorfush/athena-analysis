@@ -10,8 +10,10 @@ import time
 from tqdm import tqdm
 import yaml
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.colors import SymLogNorm
 
 yt.set_log_level(50)
+yt.enable_parallelism()
 
 class Analysis():
 
@@ -99,7 +101,115 @@ class Analysis():
 
         return current_progress
 
-    def getNormVals(self, ind, ds, refds, l1_array, l2_array, linf_array, t_array):
+    def getDivB(self, ds):
+
+        # Assumes periodic boundary conditions
+
+        ds.add_gradient_fields(("parthenon", "MagneticField1"))
+        ds.add_gradient_fields(("parthenon", "MagneticField2"))
+        ds.add_gradient_fields(("parthenon", "MagneticField3"))
+        ds.force_periodicity()
+        
+        ad = ds.all_data()
+        dBdx = ad[("parthenon","MagneticField1_gradient_x")].to_ndarray().reshape(ds.domain_dimensions)
+        dBdy = ad[("parthenon","MagneticField2_gradient_y")].to_ndarray().reshape(ds.domain_dimensions)
+        dBdz = ad[("parthenon","MagneticField3_gradient_z")].to_ndarray().reshape(ds.domain_dimensions)
+        
+        divB = dBdx + dBdy + dBdz
+        
+        return np.rot90(divB)
+
+    def extractArrayDivB(self, ds, field):
+
+        ad = ds.all_data()
+        arr = ad[field]
+        arr_np = arr.to_ndarray().reshape(ds.domain_dimensions)
+        
+        return arr_np[:,:,0]
+
+    def getcax(self, axis):
+        divider = make_axes_locatable(axis)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        return cax
+
+    def makeDivBPlot(self, ind, ds, riemann, reconst):
+
+        p_rho = yt.ProjectionPlot(ds, "z", "Density")
+        field="Density"
+        p_rho.set_cmap(field,"viridis")
+        p_rho.set_log(field, log=True)
+
+        p_u   = yt.ProjectionPlot(ds, "z", "Velocity1")
+        field="Velocity1"
+        p_u.set_cmap(field,"viridis")
+        p_u.set_log(field, log=True)
+
+        p_v   = yt.ProjectionPlot(ds, "z", "Velocity2")
+        field="Velocity2"
+        p_v.set_cmap(field,"viridis")
+        p_v.set_log(field, log=True)
+
+        p_Bx  = yt.ProjectionPlot(ds, "z", "MagneticField1")
+        field="MagneticField1"
+        p_Bx.set_cmap(field,"jet")
+        p_Bx.set_log(field, log=True)
+
+        p_By  = yt.ProjectionPlot(ds, "z", "MagneticField2")
+        field="MagneticField2"
+        p_By.set_cmap(field,"jet")
+        p_By.set_log(field, log=True)
+
+        rho  = self.extractArrayDivB(ds, "Density")
+        u    = self.extractArrayDivB(ds, "Velocity1")
+        v    = self.extractArrayDivB(ds, "Velocity2")
+        Bx   = self.extractArrayDivB(ds, "MagneticField1")
+        By   = self.extractArrayDivB(ds, "MagneticField2")
+        divB = self.getDivB(ds)[:,:,0]
+        
+        fig, ax = plt.subplots(2, 3, figsize=(16,10))
+
+        im1 = ax[0,0].imshow(rho, cmap="viridis")
+        cax1 = self.getcax(ax[0,0])
+        plt.colorbar(im1, cax=cax1)
+        ax[0,0].set_title(r"$\rho$",fontsize=18, pad=10)
+        ax[0,0].axis("off")
+
+        im2 = ax[0,1].imshow(u, cmap="viridis")
+        cax2 = self.getcax(ax[0,1])
+        plt.colorbar(im2, cax=cax2)
+        ax[0,1].set_title(r"$u$",fontsize=18, pad=10)
+        ax[0,1].axis("off")
+
+        im3 = ax[0,2].imshow(v, cmap="viridis")
+        cax3 = self.getcax(ax[0,2])
+        plt.colorbar(im3, cax=cax3)
+        ax[0,2].set_title(r"$v$",fontsize=18, pad=10)
+        ax[0,2].axis("off")
+
+        im4 = ax[1,0].imshow(Bx, cmap="jet")
+        cax4 = self.getcax(ax[1,0])
+        plt.colorbar(im4, cax=cax4)
+        ax[1,0].set_title(r"$B_x$",fontsize=18, pad=10)
+        ax[1,0].axis("off")
+
+        im5 = ax[1,1].imshow(By, cmap="jet", norm=SymLogNorm(linthresh=0.01,vmin=By.min(), vmax=By.max()))
+        cax5 = self.getcax(ax[1,1])
+        plt.colorbar(im5, cax=cax5)
+        ax[1,1].set_title(r"$B_y$",fontsize=18, pad=10)
+        ax[1,1].axis("off")
+
+        im6 = ax[1,2].imshow(divB, cmap="jet", norm=SymLogNorm(linthresh=0.1,vmin=divB.min(), vmax=divB.max()))
+        cax6 = self.getcax(ax[1,2])
+        plt.colorbar(im6, cax=cax6)
+        ax[1,2].set_title(r"$\nabla \cdot B$",fontsize=18, pad=10)
+        ax[1,2].axis("off")
+
+        fig.suptitle(f"t = {round(float(ds.current_time.value),4)}\nRiemann : {riemann}, Reconst. : {reconst}", fontsize=16, y=1.0)
+        
+        plt.savefig(f"{self.path}/{self.runname}/{self.runname}_{riemann}_{reconst}_{str(ind).zfill(5)}_divB_plot.png",dpi=276)
+        plt.close()
+
+    def getNormVals(self, ind, ds, refds, l1_array, l2_array, linf_array, t_array, normalized=True):
 
         # Getting reference riemann and reconstruction
         # reference_strs = glob.glob(f"{self.simpath}/REF_{self.runname}_*")
@@ -131,11 +241,22 @@ class Analysis():
             # e_ij = np.abs(np.abs(ref_data) - np.abs(data)) / np.abs(ref_data)
             # NEED TO GET THIS TO WORK WITH SMALL VALUES SOMEHOW
 
-            e_ij = np.abs(np.abs(ref_data) - np.abs(data))
+            if normalized:
+
+                e_ij = np.abs(np.abs(ref_data[np.where(ref_data != 0.0)]) - np.abs(data[np.where(ref_data != 0.0)])) / np.abs(ref_data[np.where(ref_data != 0.0)])
+
+            else:
+
+                e_ij = np.abs(np.abs(ref_data) - np.abs(data))
 
             l1 = 1/N * (e_ij.sum())
             l2 = np.sqrt(1/N * ((e_ij**2).sum()))
-            linf = np.amax(e_ij)
+
+            try:
+                # For initial velocities, all values are zero --> numpy doesn't like this so set linf to 0
+                linf = np.amax(e_ij)
+            except ValueError:
+                linf = 0.0
 
             l1_array[j, ind] = l1
             l2_array[j, ind] = l2
@@ -148,35 +269,110 @@ class Analysis():
         ref_ad = refds.all_data()
 
         num_fields = len(ds.field_list)
-        fig, ax = plt.subplots(3, num_fields, figsize=(15,9))
+        
 
-        for (j,field) in enumerate(ds.field_list):
+        MHD  = 0
+        TWOD = 1
 
-            arr = ad[field]
-            ref_arr = ref_ad[field]
+        for field in ds.field_list:
+            # Only MHD runs have Magnetic fields
+            if field[-1] == "MagneticPhi":
+                MHD = 1
 
-            data = arr.to_ndarray().reshape(refds.domain_dimensions)
-            ref_data = ref_arr.to_ndarray().reshape(refds.domain_dimensions)
+        if ds.domain_dimensions[-1] > 1:
+            TWOD = 0
 
-            diff = ref_data - data
+        if TWOD == 1 and MHD == 1:
+            num_fields -= 3
+        elif TWOD ==1 and MHD == 0:
+            num_fields -= 1
+        else:
+            print("NEED TO IMPLEMENT 3D later")
 
-            im1 = ax[0,j].imshow(ref_data[:,:,0])
-            im2 = ax[1,j].imshow(data[:,:,0])
-            im3 = ax[2,j].imshow(diff[:,:,0], cmap="jet")
+        if MHD == 0:
 
-            divider1 = make_axes_locatable(ax[0,j])
-            cax1 = divider1.append_axes("right",size="5%",pad=0.05)
-            cbar1 = plt.colorbar(im1, cax=cax1)
+            fig, ax = plt.subplots(3, num_fields, figsize=(15,9))
 
-            divider2 = make_axes_locatable(ax[1,j])
-            cax2 = divider2.append_axes("right",size="5%",pad=0.05)
-            cbar2 = plt.colorbar(im2, cax=cax2)
+            new_fields = []
 
-            divider3 = make_axes_locatable(ax[2,j])
-            cax3 = divider3.append_axes("right",size="5%",pad=0.05)
-            cbar3 = plt.colorbar(im3, cax=cax3)
+            for field in ds.field_list:
+                if (field[-1] != "Velocity3"):
+                    new_fields.append(field)
 
-            ax[0,j].set_title(field[-1])
+            for (j,field) in enumerate(new_fields):
+                
+                if (TWOD == 1) and (field[-1] != "Velocity3"):
+                    arr = ad[field]
+                    ref_arr = ref_ad[field]
+
+                    data = arr.to_ndarray().reshape(refds.domain_dimensions)
+                    ref_data = ref_arr.to_ndarray().reshape(refds.domain_dimensions)
+
+                    diff = ref_data - data
+
+                    vmax = max(np.amax(data), np.amax(ref_data))
+                    vmin = min(np.amin(data), np.amin(ref_data))
+
+                    im1 = ax[0,j].imshow(ref_data[:,:,0], vmax=vmax, vmin=vmin)
+                    im2 = ax[1,j].imshow(data[:,:,0], vmax=vmax, vmin=vmin)
+                    im3 = ax[2,j].imshow(diff[:,:,0], cmap="jet")
+
+                    divider1 = make_axes_locatable(ax[0,j])
+                    cax1 = divider1.append_axes("right",size="5%",pad=0.05)
+                    cbar1 = plt.colorbar(im1, cax=cax1)
+
+                    divider2 = make_axes_locatable(ax[1,j])
+                    cax2 = divider2.append_axes("right",size="5%",pad=0.05)
+                    cbar2 = plt.colorbar(im2, cax=cax2)
+
+                    divider3 = make_axes_locatable(ax[2,j])
+                    cax3 = divider3.append_axes("right",size="5%",pad=0.05)
+                    cbar3 = plt.colorbar(im3, cax=cax3)
+
+                    ax[0,j].set_title(field[-1])
+
+        else:
+
+            fig, ax = plt.subplots(3, num_fields, figsize=(20,11))
+
+            new_fields = []
+
+            for field in ds.field_list:
+                if (field[-1] != "Velocity3") and (field[-1] != "MagneticField3") and (field[-1] != "MagneticPhi"):
+                    new_fields.append(field)
+
+            for (j,field) in enumerate(new_fields):
+                # print(j, field, num_fields)
+                
+                if (TWOD == 1) and ((field[-1] != "Velocity3") and (field[-1] != "MagneticField3") and (field[-1] != "MagneticPhi")):
+                    arr = ad[field]
+                    ref_arr = ref_ad[field]
+
+                    data = arr.to_ndarray().reshape(refds.domain_dimensions)
+                    ref_data = ref_arr.to_ndarray().reshape(refds.domain_dimensions)
+
+                    diff = ref_data - data
+
+                    vmax = max(np.amax(data), np.amax(ref_data))
+                    vmin = min(np.amin(data), np.amin(ref_data))
+
+                    im1 = ax[0,j].imshow(ref_data[:,:,0], vmax=vmax, vmin=vmin)
+                    im2 = ax[1,j].imshow(data[:,:,0], vmax=vmax, vmin=vmin)
+                    im3 = ax[2,j].imshow(diff[:,:,0], cmap="jet")
+
+                    divider1 = make_axes_locatable(ax[0,j])
+                    cax1 = divider1.append_axes("right",size="5%",pad=0.05)
+                    cbar1 = plt.colorbar(im1, cax=cax1)
+
+                    divider2 = make_axes_locatable(ax[1,j])
+                    cax2 = divider2.append_axes("right",size="5%",pad=0.05)
+                    cbar2 = plt.colorbar(im2, cax=cax2)
+
+                    divider3 = make_axes_locatable(ax[2,j])
+                    cax3 = divider3.append_axes("right",size="5%",pad=0.05)
+                    cbar3 = plt.colorbar(im3, cax=cax3)
+
+                    ax[0,j].set_title(field[-1])
 
         ax[0,0].set_ylabel("Reference")
         ax[1,0].set_ylabel("Comparison")
@@ -325,6 +521,8 @@ class Analysis():
 
         # os.chdir(f"{self.path}/{self.savename}")
 
+        wholestart = time.time()
+
         self.load_params()
 
         runname = self.runname
@@ -347,6 +545,9 @@ class Analysis():
         for run in runs:
             
             print(f"\n[STARTING] Starting analysis for {run}")
+
+            # Make plot with divB?
+            divB = True
 
             outputs = sorted(glob.glob(f"{run}/*.phdf"))
             ref_out = sorted(glob.glob(f"{refrun}/*.phdf"))
@@ -373,13 +574,16 @@ class Analysis():
                 ds = yt.load(outputs[ind])
                 refds = yt.load(ref_out[ind])
 
-                # self.getNormVals(ind, ds, refds, l1_array, l2_array, linf_array, t_array)
+                if divB:
+                    self.makeDivBPlot(ind, ds, riemann, reconst)
+
+                self.getNormVals(ind, ds, refds, l1_array, l2_array, linf_array, t_array, normalized=True)
 
                 self.getDifferencePlots(ind, ds, refds, t_array, riemann, reconst, ref_riemann, ref_reconst)
 
-                # if (ind == 0) or (ind == len(outputs)-1):
+                if (ind == 0) or (ind == len(outputs)-1):
 
-                #     self.getFinalSlices(ind, ds, refds, riemann, reconst, ref_riemann, ref_reconst)
+                    self.getFinalSlices(ind, ds, refds, riemann, reconst, ref_riemann, ref_reconst)
 
             l1_lists.append(l1_array)
             l2_lists.append(l2_array)
@@ -388,8 +592,11 @@ class Analysis():
             riemanns.append(riemann)
             recons.append(reconst)
 
-        # self.getNorms(l1_lists, l2_lists, linf_lists, t_lists, riemanns, recons, field_list)
+        self.getNorms(l1_lists, l2_lists, linf_lists, t_lists, riemanns, recons, field_list)
 
+        wholeend = time.time()
+
+        print(f"[FINISHED] Finished analysis in {wholeend-wholestart} sec. ({(wholeend-wholestart)/60} min.)")
         # # Check if slices complete. If not, run getFinalSlices
 
         # print("Getting slices")

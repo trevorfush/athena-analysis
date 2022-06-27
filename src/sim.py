@@ -10,10 +10,12 @@ sys.path.append(os.path.join("..", ".."))
 
 class Runsim():
 
-    def __init__(self, params):
+    def __init__(self, args, params):
         
         # SHOULD MAKE FILES WITH PARAMETERS FOR EACH OF THE SIMULATIONS
         # TO BE RUN, THEN READ THOSE TO INCLUDE IN THIS CLASS
+
+        self.args = args
         
         # RUNNAME IS THE NAME IN THE CONFIG FILE!!!!
         self.runname   = params["runname"]
@@ -24,16 +26,29 @@ class Runsim():
         # PROBLEM ID IS THE PROBLEM ID FROM THE INPUT FILE FOR ATHENA PK
         self.problem_id = params["problem_id"]
 
-        self.recon     = params["reconstruction"]
-        self.riemann   = params["riemann"]
-
-        self.reference = params["reference_sol"]
+        if args.all == False:
+            self.recon     = args.reconstruction
+            self.riemann   = args.riemann
+            self.reference = args.reference
+        else:
+            self.recon     = params["reconstruction"]
+            self.riemann   = params["riemann"]
+            self.reference = False
 
         self.simparms  = {}
 
         self.path      = "data"
 
-        self.athenapk  = "../../athenapk"
+        if args.code == "athenapk":
+            self.executable  = "../../athenapk"
+            self.filesuffix = "phdf"
+            self.athenadir = "../athenapk" # From main directory!!
+        elif args.code == "kathena":
+            self.executable = "../../kathena"
+            self.filesuffix = "athdf"
+            self.athenadir = "../kathena" # From main directory!!
+        else:
+            print("Please use athenapk, kathena as code options.")
 
         if self.reference == True:
             self.savename = f"REF_{self.runname}"
@@ -75,7 +90,7 @@ class Runsim():
             current_progress[2] = "DONE"
         if  (fileexist == False and direxist == True):
             current_progress[1] = False
-            current_progress[2] = max(glob.glob(f"{self.path}/{self.savename}/*.?????.phdf"))
+            current_progress[2] = max(glob.glob(f"{self.path}/{self.savename}/*.?????.{self.filesuffix}"))
         if (fileexist == False and direxist == False):
             current_progress[1] = False
             current_progress[2] = None
@@ -84,7 +99,7 @@ class Runsim():
 
     def genFINISHED(self, runtime):
 
-        last_ran = max(glob.glob("./*.?????.phdf"))
+        last_ran = max(glob.glob(f"./*.?????.{self.filesuffix}"))
         
         # Calculating the last POSSIBLE output to exist based on sim params
         tlim = self.simparams["tlim"]
@@ -118,144 +133,90 @@ class Runsim():
         cp = self.checkprogress()
         
         # Load config file parameters
-        self.load_params()
+        if self.args.code == "athenapk":
+            self.load_params()
 
-        #######################################################################
-        #  Set up the command line arguments to initialize problem uniformly  #
-        #######################################################################
-        param_str = ""
-        keys = list(self.simparams.keys())
-        vals = list(self.simparams.values())
+            #######################################################################
+            #  Set up the command line arguments to initialize problem uniformly  #
+            #######################################################################
+            param_str = ""
+            keys = list(self.simparams.keys())
+            vals = list(self.simparams.values())
 
-        for i in range(len(self.simparams)):
-            if (keys[i] != "fluid") and (keys[i] != "tlim") and (keys[i] != "dt"):
-                param_str += f"problem/{self.problem_id}/{keys[i]}={vals[i]} "
-            elif (keys[i] != "tlim") and (keys[i] != "dt"):
-                param_str += f"hydro/fluid={vals[i]} "
+            for i in range(len(self.simparams)):
+                if (keys[i] != "fluid") and (keys[i] != "tlim") and (keys[i] != "dt"):
+                    param_str += f"problem/{self.problem_id}/{keys[i]}={vals[i]} "
+                elif (keys[i] != "tlim") and (keys[i] != "dt"):
+                    param_str += f"hydro/fluid={vals[i]} "
+                else:
+                    pass
+
+            for i in range(len(self.simparams)):
+                # This next check prevents crashing with hlld riemann solvers in MHD
+                if (keys[i] == "fluid") and (vals[i] != "euler"):
+                    if self.riemann == "hlld":
+                        param_str += f"hydro/first_order_flux_correct=true "
+
+                if (keys[i] == "tlim"):
+                    param_str += f"parthenon/time/tlim={vals[i]} "
+                if (keys[i] == "dt"):
+                    param_str += f"parthenon/output0/dt={vals[i]} "
+                
+            #######################################################################
+
+            # RUN IF The SIMULATION HASN'T BEEN RUN YET
+            if cp[0] == False:
+                
+                # print(here)
+                if os.path.isdir(f"{self.path}/{self.savename}_{self.args.code}_{self.riemann}_{self.recon}") != True:
+                    os.mkdir(f"{self.path}/{self.savename}_{self.args.code}_{self.riemann}_{self.recon}")
+                    os.chdir(f"{self.path}/{self.savename}_{self.args.code}_{self.riemann}_{self.recon}")
+
+                # print(self.riemann, self.recon)
+
+                runstate = f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} {param_str} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3"
+
+                print(f"[RUNNING] {runstate}")
+                start = time.time()
+                os.system(runstate)
+                end = time.time()
+
+                rt = end-start
+
+                ## NEED TO CHECK IF IT ACTUALLY FINISHED HERE
+                self.genFINISHED(runtime=rt)
+
+                os.chdir(f"../..")
+            
+            # RUN PICKING UP WHERE THE SIMULATION LEFT OFF
+            elif (cp[0] == True and cp[1] == False):
+
+                last = cp[2]
+
+                # NEED TO FILL THIS IN
+                os.chdir(f"{self.path}/{self.savename}")
+                os.system(f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} -r {last} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3")
+
             else:
-                pass
 
-        for i in range(len(self.simparams)):
-            # This next check prevents crashing with hlld riemann solvers in MHD
-            if (keys[i] == "fluid") and (vals[i] != "euler"):
-                if self.riemann == "hlld":
-                    param_str += f"hydro/first_order_flux_correct=true "
+                print("Something went weird, might want to double check something!")
 
-            if (keys[i] == "tlim"):
-                param_str += f"parthenon/time/tlim={vals[i]} "
-            if (keys[i] == "dt"):
-                param_str += f"parthenon/output0/dt={vals[i]} "
+        elif self.args.code == "kathena":
             
-        #######################################################################
+            if os.path.isdir(f"{self.path}/{self.savename}_{self.args.code}_{self.riemann}_{self.recon}") != True:
+                os.mkdir(f"{self.path}/{self.savename}_{self.args.code}_{self.riemann}_{self.recon}")
+                
+            os.chdir(f"{self.athenadir}")
 
-        # RUN IF The SIMULATION HASN'T BEEN RUN YET
-        if cp[0] == False:
+            if self.runname == "sedov_noB":
+                prob = "sedov"
+
+            # Need to write the command to execute the configure.py with the correct parameters
+            configure_statement = f"./configure --prob={prob} --kokkos_arch='AMD' --kokkos_devices='OpenMP' --flux={self.riemann} -mpi --cxx=icc --ccmd=mpiicpc -hdf5 --hdf5_path=$EBROOTHDF5 -b"
+
+            os.system(configure_statement)
+            os.system(f"make")
             
-            # print(here)
-            os.mkdir(f"{self.path}/{self.savename}_{self.riemann}_{self.recon}")
-            os.chdir(f"{self.path}/{self.savename}_{self.riemann}_{self.recon}")
-
-            # print(self.riemann, self.recon)
-
-            runstate = f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} {param_str} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3"
-
-            print(f"[RUNNING] {runstate}")
-            start = time.time()
-            os.system(runstate)
-            end = time.time()
-
-            rt = end-start
-
-            ## NEED TO CHECK IF IT ACTUALLY FINISHED HERE
-            self.genFINISHED(runtime=rt)
-
-            os.chdir(f"../..")
-        
-        # RUN PICKING UP WHERE THE SIMULATION LEFT OFF
-        elif (cp[0] == True and cp[1] == False):
-
-            last = cp[2]
-
-            # NEED TO FILL THIS IN
-            os.chdir(f"{self.path}/{self.savename}")
-            os.system(f"../{self.athenapk}/build-host/bin/athenaPK -i ../{self.athenapk}/inputs/{self.inputfile} -r {last} hydro/reconstruction={self.recon} hydro/riemann={self.riemann} parthenon/mesh/nghost=3")
-
-        else:
-
-            print("Something went weird, might want to double check something!")
+            # Execute the kathena binary with the right input file
 
 
-# if __name__ == "__main__":
-
-    # RUNNAME IS THE NAME IN THE CONFIG FILE!!!!
-    # PROBLEM NAME IS THE NAME OF THE CORRESPONDING INPUT FILE IN ATHENA-PK
-    # PROBLEM ID IS THE PROBLEM ID FROM THE INPUT FILE FOR ATHENA PK
-
-    # sedov_noB_params = {
-    #                     "runname"        : "sedov_noB",
-    #                     "problem_name"   : "sedov.in",
-    #                     "problem_id"     : "sedov",
-    #                     "reconstruction" : "plm",
-    #                     "riemann"        : "hlle",
-    #                     "reference_sol"  : False
-    #                    }
-
-    # brio_wu_params = {
-    #                   "runname"        : "brio_wu",
-    #                   "problem_name"   : "sod.in",
-    #                   "problem_id"     : "sod",
-    #                   "reconstruction" : "plm",
-    #                   "riemann"        : "hlle",
-    #                   "reference_sol"  : False
-    #                  }
-
-    # sedov_Bx_params = {
-    #                    "runname"        : "sedov_Bx",
-    #                    "problem_name"   : "sedov.in",
-    #                    "problem_id"     : "sedov",
-    #                    "reconstruction" : "plm",
-    #                    "riemann"        : "hlle",
-    #                    "reference_sol"  : False
-    #                   }
-
-    # sedov_By_params = {
-    #                    "runname"        : "sedov_By",
-    #                    "problem_name"   : "sedov.in",
-    #                    "problem_id"     : "sedov",
-    #                    "reconstruction" : "plm",
-    #                    "riemann"        : "hlle",
-    #                    "reference_sol"  : False
-    #                   }
-
-    # kh_noB_params = {
-    #                  "runname"        : "kh_noB",
-    #                  "problem_name"   : "kh-shear-lecoanet_2d.in",
-    #                  "problem_id"     : "kh",
-    #                  "reconstruction" : "plm",
-    #                  "riemann"        : "hlle",
-    #                  "reference_sol"  : False
-    #                 }
-
-    # current_sheet_params = {
-    #                         "runname"        : "current_sheet",
-    #                         "problem_name"   : "current_sheet.in",
-    #                         "problem_id"     : "current_sheet",
-    #                         "reconstruction" : "plm",
-    #                         "riemann"        : "hlle",
-    #                         "reference_sol"  : False
-    #                        }
-
-    # orszag_tang_params = {
-    #                       "runname"        : "orszag_tang",
-    #                       "problem_name"   : "orszag_tang.in",
-    #                       "problem_id"     : "orszag_tang",
-    #                       "reconstruction" : "plm",
-    #                       "riemann"        : "hlle",
-    #                       "reference_sol"  : False
-    #                      }
-
-    # test = Runsim(params)
-    
-    # print("Runsim object created, running sim!")
-    # test.runsim()
-    # print("Finished running sim!")

@@ -1,16 +1,19 @@
 #!/bin/bash
 ########## SBATCH Lines for Resource Request ##########
  
-#SBATCH --time=01:30:00             # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --time=00:50:00             # limit of wall clock time - how long the job will run (same as -t)
 #SBATCH --nodes=1                   # number of different nodes - could be an exact number or a range of nodes (same as -N)
-#SBATCH --ntasks=1                  # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --ntasks=8                  # number of tasks - how many tasks (nodes) that you require (same as -n)
 #SBATCH --cpus-per-task=1           # number of CPUs (or cores) per task (same as -c)
-#SBATCH --mem-per-cpu=4G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
-#SBATCH --job-name current_sheet    # you can give your job a name for easier identification (same as -J)
-#SBATCH -o "runinfo_cs.out"
-#SBATCH -w amr-090
+#SBATCH --mem-per-cpu=8G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
+#SBATCH --job-name turb_analysis    # you can give your job a name for easier identification (same as -J)
+#SBATCH -o "runinfo_turb_analysis.out"
+##SBATCH -w amr-090
+#SBATCH -C "amd20"
 
-module purge;
-module load gcccuda/2020a OpenMPI/4.0.3 git HDF5 Qt5 FFTW CMake Clang;
+# module purge;
+# module load gcccuda/2020a OpenMPI/4.0.3 git HDF5 Qt5 FFTW CMake Clang;
 
-python main.py orszag_tang
+# python main.py sedov_By
+
+python analysismain.py turbulence

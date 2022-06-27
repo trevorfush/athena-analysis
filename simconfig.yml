@@ -116,3 +116,6 @@ orszag_tang:
 
   tlim: 1.0
   dt: 0.05
+
+turbulence:
+  fluid: "glmmhd"
