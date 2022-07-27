@@ -18,4 +18,4 @@ Run python analysismain.py with the arguments...
 
 ## Directory contents
 
-In addition to the norm and divergence calculations, scripts are included that ran the simulation for K-Athena and Athena-PK, as well as scripts to run the flow analysis on each of the turbulence simulations in a directory. To run Athena-PK (K-Athena) simulations, the `athenapk_run_script.sh` (`athenapk_run_script.sh`) can be run after changing the location of the `athenapk` (`kathena`) directory. To run flow analysis, browse through the `flow_analysis_script.sh` script and adjust needed parameters and run.
+In addition to the norm and divergence calculations, scripts are included that ran the simulation for K-Athena and Athena-PK, as well as scripts to run the flow analysis on each of the turbulence simulations in a directory. To run Athena-PK (K-Athena) simulations, the `athenapk_run_script.sh` (`kathena_run_script.sh`) can be run after changing the location of the `athenapk` (`kathena`) directory. To run flow analysis, browse through the `flow_analysis_script.sh` script and adjust needed parameters and run.
