@@ -966,18 +966,33 @@ class Analysis():
 
         # Gather all outputs for the run and the reference solution
         if code == "athenapk":
-            outputs = sorted(glob.glob(f"{run}/*.phdf"))
-            if self.refcode == "athenapk":
-                ref_out = sorted(glob.glob(f"{refrun}/*.phdf"))
+            if self.runname == "turbulence":
+                outputs = sorted(glob.glob(f"{run}/Turb.prim.?????.phdf"))
+                if self.refcode == "athenapk":
+                    ref_out = sorted(glob.glob(f"{refrun}/Turb.prim.?????.phdf"))
+                else:
+                    ref_out = sorted(glob.glob(f"{refrun}/Turb.prim.?????.{self.kathenasuffix}"))
+                print ("YUP ITS ATHENAPK")
             else:
-                ref_out = sorted(glob.glob(f"{refrun}/*.{self.kathenasuffix}"))
-            print ("YUP ITS ATHENAPK")
+                outputs = sorted(glob.glob(f"{run}/*.phdf"))
+                if self.refcode == "athenapk":
+                    ref_out = sorted(glob.glob(f"{refrun}/*.phdf"))
+                else:
+                    ref_out = sorted(glob.glob(f"{refrun}/*.{self.kathenasuffix}"))
+                print ("YUP ITS ATHENAPK")
         else:
-            outputs = sorted(glob.glob(f"{run}/*.{self.kathenasuffix}"))
-            if self.refcode == "kathena":
-                ref_out = sorted(glob.glob(f"{refrun}/*.{self.kathenasuffix}"))
+            if self.runname == "turbulence":
+                outputs = sorted(glob.glob(f"{run}/Turb.prim.?????.{self.kathenasuffix}"))
+                if self.refcode == "kathena":
+                    ref_out = sorted(glob.glob(f"{refrun}/Turb.prim.?????.{self.kathenasuffix}"))
+                else:
+                    ref_out = sorted(glob.glob(f"{refrun}/Turb.prim.?????.phdf"))
             else:
-                ref_out = sorted(glob.glob(f"{refrun}/*.phdf"))
+                outputs = sorted(glob.glob(f"{run}/*.{self.kathenasuffix}"))
+                if self.refcode == "kathena":
+                    ref_out = sorted(glob.glob(f"{refrun}/*.{self.kathenasuffix}"))
+                else:
+                    ref_out = sorted(glob.glob(f"{refrun}/*.phdf"))
 
 
         # Get riemann and reconstruction methods for labelling the plots
@@ -1108,8 +1123,9 @@ class Analysis():
         riemanns   = np.zeros(len(runs), dtype=np.dtype("U100"))
         recons     = np.zeros(len(runs), dtype=np.dtype("U100"))
         codes      = np.zeros(len(runs), dtype=np.dtype("U100"))
+        integs     = np.zeros(len(runs), dtype=np.dtype("U100"))
 
-        return np.array(l1), np.array(l2), np.array(linf), np.array(max_divB), np.array(mean_divB), np.array(t), np.array(riemanns), np.array(recons), np.array(codes)
+        return np.array(l1), np.array(l2), np.array(linf), np.array(max_divB), np.array(mean_divB), np.array(t), np.array(riemanns), np.array(recons), np.array(codes), np.array(integs)
 
 
     def Analyze(self):
@@ -1127,30 +1143,41 @@ class Analysis():
 
         print(self.runname)
 
-        runs  = glob.glob(f"{self.simloc}/{self.runname}_*")
-        refrun = glob.glob(f"{self.simloc}/REF_{self.runname}_*")[0]
+        pre_runs  = glob.glob(f"{self.simloc}/{self.runname}_*")
+        pre_refrun = glob.glob(f"{self.simloc}/REF_{self.runname}_*")
 
-        print(refrun) 
+        runs = []
+
+        for run in pre_runs:
+            if run.split(".")[-1] != "gz":
+                runs.append(run)
+        
+        for run in pre_refrun:
+            if run.split(".")[-1] != "gz":
+                refrun = run
 
         self.refcode = refrun.split("/")[-1].split("_")[-3]
 
-        print(runs)
+        print(f"Runs = {runs}")
 
         # Generating empty arrays for norms
         ###############################################################
+        if self.runname == "turbulence":
+            tempoutput = sorted(glob.glob(f"{runs[0]}/Turb.prim.?????.{self.athenapksuffix}")) + sorted(glob.glob(f"{runs[0]}/Turb.prim.?????.{self.kathenasuffix}"))
+        else:
+            tempoutput = sorted(glob.glob(f"{runs[0]}/*.{self.athenapksuffix}")) + sorted(glob.glob(f"{runs[0]}/*.{self.kathenasuffix}"))
 
-        tempoutput = sorted(glob.glob(f"{runs[0]}/*.{self.athenapksuffix}")) + sorted(glob.glob(f"{runs[0]}/*.{self.kathenasuffix}"))
         temp_val = yt.load(tempoutput[-1])
         field_list = temp_val.field_list
 
         num_fields = len(field_list)
         num_touts  = len(tempoutput)
 
-        l1_lists, l2_lists, linf_lists, max_divB_lists, mean_divB_lists, t_lists, riemanns, recons, codes = self.getEmptyNormArrays(runs)
+        l1_lists, l2_lists, linf_lists, max_divB_lists, mean_divB_lists, t_lists, riemanns, recons, codes, integs = self.getEmptyNormArrays(runs)
 
         ###############################################################
 
-        print(f"L1 list size : {l1_lists.shape}")
+        # print(f"L1 list size : {l1_lists.shape}")
 
         norm_array_sizes = 1
         for size in l1_lists[0].shape:
@@ -1161,8 +1188,8 @@ class Analysis():
         for size in t_lists.shape:
             t_array_size *= size
 
-        print(f"Norm array size : {norm_array_sizes}")
-        print(f"T array sizes : {t_array_size}")
+        # print(f"Norm array size : {norm_array_sizes}")
+        # print(f"T array sizes : {t_array_size}")
 
         # SHARING MEMORY BETWEEN PROCESSES
         mp_l1 = mp.Array(ctypes.c_double, norm_array_sizes)
@@ -1189,7 +1216,7 @@ class Analysis():
         field_dict_short_list = np.array([dict() for x in range(len(runs))])
         field_dict_list = np.array([dict() for x in range(len(runs))])
 
-        print(f"L1 arr size : {l1_arr.shape}")
+        # print(f"L1 arr size : {l1_arr.shape}")
         
 
         processes = []
@@ -1205,17 +1232,23 @@ class Analysis():
             divB = True
 
             # Get sorted outputs for each run (run denotes set of num. methods)
-            outputs = sorted(glob.glob(f"{run}/*.{self.athenapksuffix}")) + sorted(glob.glob(f"{run}/*.{self.kathenasuffix}"))
-            ref_out = sorted(glob.glob(f"{refrun}/*.{self.athenapksuffix}")) + sorted(glob.glob(f"{refrun}/*.{self.kathenasuffix}"))
-
+            if self.runname == "turbulence":
+                outputs = sorted(glob.glob(f"{run}/parthenon.prim.?????.{self.athenapksuffix}")) + sorted(glob.glob(f"{run}/Turb.prim.?????.{self.kathenasuffix}"))
+                ref_out = sorted(glob.glob(f"{refrun}/Turb.prim.?????.{self.athenapksuffix}")) + sorted(glob.glob(f"{refrun}/Turb.prim.?????.{self.kathenasuffix}"))
+            else:
+                outputs = sorted(glob.glob(f"{run}/*.{self.athenapksuffix}")) + sorted(glob.glob(f"{run}/*.{self.kathenasuffix}"))
+                ref_out = sorted(glob.glob(f"{refrun}/*.{self.athenapksuffix}")) + sorted(glob.glob(f"{refrun}/*.{self.kathenasuffix}"))
            
             # Get num methods used for run and store it for later labelling
-            print(outputs[0].split("/")[-2].split("_")[-2])
+            print(f"Sorted athenapk suffix = {sorted(glob.glob(f'{run}/Turb.prim.?????.{self.athenapksuffix}'))}")
             riemann = outputs[0].split("/")[-2].split("_")[-2]
             reconst = outputs[0].split("/")[-2].split("_")[-1]
-            code    = outputs[0].split("/")[-2].split("_")[-3]
+            code    = outputs[0].split("/")[-2].split("_")[-4]
+            integ   = outputs[0].split("/")[-2].split("_")[-3]
 
-            self.refcode = ref_out[0].split("/")[-2].split("_")[-3]
+            print(f"refrun = {refrun}")
+
+            self.refcode = ref_out[0].split("/")[-2].split("_")[-4]
 
             print(id, outputs[0], code)
 
@@ -1223,6 +1256,7 @@ class Analysis():
             riemanns[id] = riemann
             recons[id] = reconst
             codes[id] = code
+            integs[id] = integ
             print(f"RIEMANN IN LIST : {riemanns[id]}")
             print(f"CODE APPENDED TO LIST : {codes[id]}, id : {id}")
 

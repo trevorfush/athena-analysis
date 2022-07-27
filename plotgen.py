@@ -1,3 +1,4 @@
+from cmath import e
 import numpy as np 
 import matplotlib.pyplot as plt
 import h5py
@@ -6,7 +7,7 @@ import os
 
 # the style_dict key corresponds to the directory name in which the analysis data is stored
 sim_dict = {
-    'turbulence_10T_sub_rk4_hlld_4' : {
+    'REF_turbulence_10T_sub_kathena_rk4_hlld_4' : {
         'style' : {
             'label' : 'FID-CT_RK4_HLLD_PPM+T',
             'color' : "firebrick",
@@ -25,7 +26,7 @@ sim_dict = {
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_rk4_hlld_4_{dump:05d}.hdf5',
     },
 
-    'turbulence_10T_sub_rk4_hlle_4' : {
+    'turbulence_10T_sub_kathena_rk4_hlle_4' : {
         'style' : {
             'label' : 'CT_RK4_HLLE_PPM+T',
             'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[1],
@@ -37,7 +38,7 @@ sim_dict = {
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_rk4_hlle_4_{dump:05d}.hdf5',
     },
 
-    'turbulence_10T_sub_rk4_roe_4' : {
+    'turbulence_10T_sub_kathena_rk4_roe_4' : {
         'style' : {
             'label' : 'CT_RK4_ROE_PPM+T',
             'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[2],
@@ -49,7 +50,7 @@ sim_dict = {
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_rk4_roe_4_{dump:05d}.hdf5',
     },
 
-    'turbulence_10T_sub_rk3_hlld_4' : {
+    'turbulence_10T_sub_kathena_rk3_hlld_4' : {
         'style' : {
             'label' : 'CT_RK3_HLLD_PPM+T',
             'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[3],
@@ -61,7 +62,7 @@ sim_dict = {
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_rk3_hlld_4_{dump:05d}.hdf5',
     },
 
-    'turbulence_10T_sub_rk2_hlld_4' : {
+    'turbulence_10T_sub_kathena_rk2_hlld_4' : {
         'style' : {
             'label' : 'CT_RK2_HLLD_PPM+T',
             'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[4],
@@ -73,7 +74,7 @@ sim_dict = {
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_rk2_hlld_4_{dump:05d}.hdf5',
     },
 
-    'turbulence_10T_sub_vl2_hlld_4' : {
+    'turbulence_10T_sub_kathena_vl2_hlld_4' : {
         'style' : {
             'label' : 'CT_VL2_HLLD_PPM+T',
             'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[5],
@@ -85,7 +86,7 @@ sim_dict = {
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_vl2_hlld_4_{dump:05d}.hdf5',
     },
 
-    'turbulence_10T_sub_rk4_hlld_3' : {
+    'turbulence_10T_sub_kathena_rk4_hlld_3' : {
         'style' : {
             'label' : 'CT_RK4_HLLD_PPM',
             'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[6],
@@ -97,7 +98,7 @@ sim_dict = {
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_rk4_hlld_3_{dump:05d}.hdf5',
     },
 
-    'turbulence_10T_sub_rk4_hlld_2' : {
+    'turbulence_10T_sub_kathena_rk4_hlld_2' : {
         'style' : {
             'label' : 'CT_RK4_HLLD_PLM',
             'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[7],
@@ -108,36 +109,55 @@ sim_dict = {
         'time_between_dumps' : 0.1,
         'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_sub_rk4_hlld_2_{dump:05d}.hdf5',
     },
+
+    'turbulence_10T_sub_athenapk_rk3_hlld_ppm' : {
+        'style' : {
+            'label' : 'DC_RK3_HLLD_PPM',
+            'color' : palettable.colorbrewer.qualitative.Set1_9.mpl_colors[8],
+        },
+        'first_dump_id' : 1,  
+        'last_dump_id' : 99,  
+        'analysis_res' : 256, 
+        'time_between_dumps' : 0.1,
+        'filename_pattern' : '{full_data_dir:s}/flow_analysis_10T_athenapk_sub_rk3_hlld_ppm_{dump:05d}.hdf5',
+    },
 }
 
 grouping_dict = {
     "integrators" : [
-        'turbulence_10T_sub_rk4_hlld_4',
-        'turbulence_10T_sub_rk3_hlld_4',
-        'turbulence_10T_sub_rk2_hlld_4',
-        'turbulence_10T_sub_vl2_hlld_4'
+        'REF_turbulence_10T_sub_kathena_rk4_hlld_4',
+        'turbulence_10T_sub_kathena_rk3_hlld_4',
+        'turbulence_10T_sub_kathena_rk2_hlld_4',
+        'turbulence_10T_sub_kathena_vl2_hlld_4'
     ],
 
     "riemanns" : [
-        'turbulence_10T_sub_rk4_hlld_4',
-        'turbulence_10T_sub_rk4_hlle_4',
-        'turbulence_10T_sub_rk4_roe_4'
+        'REF_turbulence_10T_sub_kathena_rk4_hlld_4',
+        'turbulence_10T_sub_kathena_rk4_hlle_4',
+        'turbulence_10T_sub_kathena_rk4_roe_4'
     ],
 
     "reconstruction" : [
-        'turbulence_10T_sub_rk4_hlld_4',
-        'turbulence_10T_sub_rk4_hlld_3',
-        'turbulence_10T_sub_rk4_hlld_2'
+        'REF_turbulence_10T_sub_kathena_rk4_hlld_4',
+        'turbulence_10T_sub_kathena_rk4_hlld_3',
+        'turbulence_10T_sub_kathena_rk4_hlld_2'
+    ],
+
+    "divergence" : [
+        "turbulence_10T_sub_kathena_rk3_hlld_4",
+        "turbulence_10T_sub_athenapk_rk3_hlld_ppm"
     ]
 }
 
 Alpha = 0.3 # Alpha of the lines not currently being emphasize in panels
 Discard = 3.0 # How many turnover times to discard at start of sim for averaging
+Low = 7
+Up = 40
 
 Comp = {
-    "rhoU" : 4./3.,
+    "rhoU" : 5./3.,
     "B" : 1.7,
-    "u" : 4./3.
+    "u" : 5./3.
 }
 
 
@@ -155,9 +175,13 @@ def fetchData(FlowStats, sim_dict, Ids, print_miss_files=False):
 
         for Dump in np.arange(sim_dict[Id]['first_dump_id'],
                             sim_dict[Id]['last_dump_id'] + 1):
+            
+            if Id.split("_")[-4] == "athenapk":
+                this_dir = AthenaRootDir + Id
+            else:
+                this_dir = RootDir + Id
 
-            this_dir = RootDir + Id
-
+            # print(f"this_dir = {this_dir}")
 
             this_file = sim_dict[Id]['filename_pattern'].format(
                 full_data_dir = this_dir,
@@ -222,7 +246,14 @@ def plotTimeAveragedQuant(QuanStruct, FlowStats, sim_dict, fname):
     # Loop over everything, add labels, and grayscale lines in back
     ax[2].set_xlabel("Time")
     for i in range(3):
-        ax[i].set_ylabel(QuanLabel)
+        if i == 0:
+            type = "by Integrator"
+        elif i == 1:
+            type = "by Riemann"
+        else:
+            type = "by Reconst."
+
+        ax[i].set_ylabel(QuanLabel + "\n" + type)
         ax[i].legend()
         ax[i].grid()
 
@@ -234,6 +265,24 @@ def plotTimeAveragedQuant(QuanStruct, FlowStats, sim_dict, fname):
     fig.subplots_adjust(wspace=0.00,hspace=0.01)
 
     plt.savefig(fname)
+    plt.close()
+
+    # Comparing Codes
+    fig, ax = plt.subplots(1, 1)
+
+    for i, sim in enumerate(grouping_dict["divergence"]):
+        time, quant = getTemporalData(sim, sim_dict[sim]["analysis_res"], QuanName, FlowStats)
+        ax.plot(time, quant, **sim_dict[sim]["style"])
+
+    ax.legend()
+    ax.grid()
+
+    ax.set_ylabel(QuanLabel + "\n" + "DC vs CT")
+    ax.set_xlabel("Time")
+
+    fig.tight_layout()
+
+    plt.savefig("comparing_codes_" + QuanStruct[2] + ".png")
     plt.close()
 
     return
@@ -292,7 +341,14 @@ def plotAveragedSpectra(FlowStats, sim_dict, QuanStruct, fname, show_std=False):
 
     ax[2].set_xlabel("Wavenumber k")
     for i in range(3):
-        ax[i].set_ylabel(QuanLabel)
+        if i == 0:
+            type = "by Integrator"
+        elif i == 1:
+            type = "by Riemann"
+        else:
+            type = "by Reconst."
+
+        ax[i].set_ylabel(QuanLabel + "\n" + type)
         ax[i].legend()
         ax[i].grid()
 
@@ -304,6 +360,8 @@ def plotAveragedSpectra(FlowStats, sim_dict, QuanStruct, fname, show_std=False):
             ax[i].plot(X[mask], Y[mask], color="black", alpha=Alpha, zorder=1)
 
     for i in range(3):
+        if Quan != "B":
+            ax[i].axvspan(Low,Up, facecolor='black', alpha=0.05)
         ax[i].set_xlim(1.,AnaRes/2)
         ax[i].set_xscale("log")
         ax[i].set_yscale("log")
@@ -317,6 +375,32 @@ def plotAveragedSpectra(FlowStats, sim_dict, QuanStruct, fname, show_std=False):
     fig.subplots_adjust(wspace=0.00,hspace=0.01)
 
     plt.savefig(fname)
+    plt.close()
+
+    # Comparing codes
+    fig, ax = plt.subplots(1, 1)
+
+    for i, sim in enumerate(grouping_dict["divergence"]):
+        AnaRes = sim_dict[sim]["analysis_res"]
+        X, Y, Yerr = getTimeAveragedSpectra(FlowStats, sim, AnaRes, Quan, Type) # Type can be "Full", "Sol", or "Dil"
+        
+        mask = np.logical_and(X < AnaRes/2, X!=0.0)
+        
+        ax.plot(X[mask], Y[mask], **sim_dict[sim]["style"])
+
+        if show_std:
+            ax.fill_between(X[mask], Y[mask]-Yerr[mask], Y[mask]+Yerr[mask], alpha=0.3, color=sim_dict[sim]["style"]["color"])
+
+    ax.legend()
+    ax.grid()
+    ax.set_xlim(1.,AnaRes/2)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+
+    ax.set_ylabel(QuanLabel + "\n" + "DC vs CT")
+    fig.tight_layout()
+
+    plt.savefig("comparing_codes_spectra_" + Quan + ".png")
     plt.close()
 
     return
@@ -373,7 +457,15 @@ def plotCompensatedAveragedSpectra(FlowStats, sim_dict, QuanStruct, Comp, fname,
 
     ax[2].set_xlabel("Wavenumber k")
     for i in range(3):
-        ax[i].set_ylabel(QuanLabel)
+            
+        if i == 0:
+            type = "by Integrator"
+        elif i == 1:
+            type = "by Riemann"
+        else:
+            type = "by Reconst."
+
+        ax[i].set_ylabel("Comp. " + QuanLabel + "\n" + type)
         ax[i].legend()
         ax[i].grid()
 
@@ -385,6 +477,8 @@ def plotCompensatedAveragedSpectra(FlowStats, sim_dict, QuanStruct, Comp, fname,
             ax[i].plot(X[mask], X[mask]**Comp[Quan]*Y[mask], color="black", alpha=Alpha, zorder=1)
 
     for i in range(3):
+        if Quan != "B":
+            ax[i].axvspan(Low,Up, facecolor='black', alpha=0.05)
         ax[i].set_xlim(1.,AnaRes/2)
         ax[i].set_xscale("log")
         ax[i].set_yscale("log")
@@ -400,12 +494,41 @@ def plotCompensatedAveragedSpectra(FlowStats, sim_dict, QuanStruct, Comp, fname,
     plt.savefig(fname)
     plt.close()
 
+    # Comparing codes
+    fig, ax = plt.subplots(1, 1)
+
+    for i, sim in enumerate(grouping_dict["divergence"]):
+        AnaRes = sim_dict[sim]["analysis_res"]
+        X, Y, Yerr = getTimeAveragedSpectra(FlowStats, sim, AnaRes, Quan, Type) # Type can be "Full", "Sol", or "Dil"
+        
+        mask = np.logical_and(X < AnaRes/2, X!=0.0)
+        
+        ax.plot(X[mask], X[mask]**Comp[Quan]*Y[mask], **sim_dict[sim]["style"])
+
+        if show_std:
+            ax.fill_between(X[mask], X[mask]**Comp[Quan] *(Y[mask]-Yerr[mask]), 
+                               X[mask]**Comp[Quan] *(Y[mask]+Yerr[mask]), alpha=0.3, 
+                               color=sim_dict[sim]["style"]["color"])
+    ax.legend()
+    ax.grid()
+    ax.set_xlim(1.,AnaRes/2)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+
+    ax.set_ylabel("Comp. " + QuanLabel + "\n" + "DC vs CT")
+    fig.tight_layout()
+
+    plt.savefig("comparing_codes_comp_spectra_" + Quan + ".png")
+    plt.close()
+
+    return
 
 if __name__ == "__main__":
 
     # root directory of the simulation
     # This currently assumes that all subdirectories (= style_dict keys) are in this single root directory
     RootDir = '/mnt/scratch/fushstep/turb-sims/'
+    AthenaRootDir = "/mnt/home/fushstep/athenapk/turb-sims/"
     PlotPrefix = "plot"
 
     Ids = list(sim_dict.keys())
@@ -419,8 +542,9 @@ if __name__ == "__main__":
         ('u' + '/moments/' + 'rms',r'RMS $\mathrm{Ms}$',"rmsU"),
         ('KinEnSpecific' + '/moments/' + 'mean',r'Mean $\mathrm{KE_s}$', "meanKEspec"),
         ('KinEnDensity' + '/moments/' + 'mean',r'Mean $\mathrm{KE}$', "meanKEdens"),
-        ('AlfvenicMach' + '/moments/' + 'rms',r'RMS $\mathrm{Ma}$', "Ma"),                                  
+        ('AlfvenicMach' + '/moments/' + 'rms',r'RMS $\mathrm{M_a}$', "Ma"),                                  
         ('rho-B/corr',r'$\mathrm{Corr}[\rho,B]$', "rho-Bcorr"),
+        ('MagEnDensity' + '/moments/' + 'mean', r'Mean $E_B$', "magEn")
     ]
 
     for QuanStruct in quantities_to_plot:
@@ -435,10 +559,19 @@ if __name__ == "__main__":
     ]
 
     for QuanStruct in sprectra_to_plot:
-        fname = f"{PlotPrefix}_spectra_{QuanStruct[0]}.png"
+        fname = f"{PlotPrefix}_spectra_nostd_{QuanStruct[0]}.png"
+        print(f"Making {QuanStruct[1]} temporal averaged spectra plot ({fname}) for {QuanStruct[0]}")
+        plotAveragedSpectra(FlowStats, sim_dict, QuanStruct, fname, show_std=False)
+
+        fname = f"{PlotPrefix}_comp_spectra_nostd_{QuanStruct[0]}.png"
+        print(f"Making {QuanStruct[1]} compensated temporal averaged spectra plot ({fname}) for {QuanStruct[0]}")
+        plotCompensatedAveragedSpectra(FlowStats, sim_dict, QuanStruct, Comp, fname, show_std=False)
+
+    for QuanStruct in sprectra_to_plot:
+        fname = f"{PlotPrefix}_spectra_std_{QuanStruct[0]}.png"
         print(f"Making {QuanStruct[1]} temporal averaged spectra plot ({fname}) for {QuanStruct[0]}")
         plotAveragedSpectra(FlowStats, sim_dict, QuanStruct, fname, show_std=True)
 
-        fname = f"{PlotPrefix}_comp_spectra_{QuanStruct[0]}.png"
+        fname = f"{PlotPrefix}_comp_spectra_std_{QuanStruct[0]}.png"
         print(f"Making {QuanStruct[1]} compensated temporal averaged spectra plot ({fname}) for {QuanStruct[0]}")
         plotCompensatedAveragedSpectra(FlowStats, sim_dict, QuanStruct, Comp, fname, show_std=True)
